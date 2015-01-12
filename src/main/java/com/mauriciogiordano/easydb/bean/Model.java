@@ -15,7 +15,7 @@ import java.util.List;
 /**
  * Created by mauricio on 12/7/14.
  */
-public abstract class AbstractBean<T> {
+public abstract class Model<T> {
 
     protected Class<T> clazz;
     protected Context context;
@@ -65,14 +65,14 @@ public abstract class AbstractBean<T> {
         evaluated.add(clazz);
     }
 
-    public AbstractBean(Class<T> clazz, boolean cache) {
+    public Model(Class<T> clazz, boolean cache) {
         this.clazz = clazz;
         this.cache = cache;
 
         evaluateObject();
     }
 
-    public AbstractBean(Class<T> clazz, boolean cache, Context context) {
+    public Model(Class<T> clazz, boolean cache, Context context) {
         this.clazz = clazz;
         this.context = context;
         this.cache = cache;
@@ -147,7 +147,7 @@ public abstract class AbstractBean<T> {
             e.printStackTrace();
         }
 
-        ((AbstractBean<T>) object).setContext(context);
+        ((Model<T>) object).setContext(context);
 
         return object;
     }
@@ -322,5 +322,54 @@ public abstract class AbstractBean<T> {
         return fromJson(object);
     }
 
+    /* Listeners */
+    protected ModelListenerHandler modelListenerHandler;
+
+    public static abstract class OnUpdateListener {
+        public abstract void onUpdate(Model object, ModelListenerHandler.Status status);
+    }
+
+    private static class ModelListenerHandler {
+
+        public List<OnUpdateListener> onUpdateListeners;
+
+        public enum Status {
+            CREATED,
+            UPDATED,
+            REMOVED
+        }
+
+        private static ModelListenerHandler modelListenerHandler = null;
+
+        public static ModelListenerHandler getInstance() {
+            if(modelListenerHandler == null) {
+                modelListenerHandler = new ModelListenerHandler();
+            }
+
+            return modelListenerHandler;
+        }
+
+        private ModelListenerHandler() {
+            onUpdateListeners = new ArrayList<OnUpdateListener>();
+        }
+
+        protected void execOnUpdateListeners(Model target, Status status) {
+            int size = onUpdateListeners.size();
+
+            for(int i = 0; i < size; i++) {
+                onUpdateListeners.get(i).onUpdate(target, status);
+            }
+        }
+    }
+
+    public void addOnUpdateListener(OnUpdateListener onUpdateListener) {
+        modelListenerHandler.onUpdateListeners.add(onUpdateListener);
+    }
+
+    public void removeOnUpdateListener(OnUpdateListener onUpdateListener) {
+        modelListenerHandler.onUpdateListeners.remove(onUpdateListener);
+    }
+
+    /* Abstract methods */
     public abstract Object getId();
 }

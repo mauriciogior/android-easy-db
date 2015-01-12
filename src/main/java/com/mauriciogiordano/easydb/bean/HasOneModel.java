@@ -5,16 +5,16 @@ import android.content.Context;
 /**
  * Created by mauricio on 12/7/14.
  */
-public abstract class AbstractHasOneBean<T, O> extends AbstractBean<T> {
+public abstract class HasOneModel<T, O> extends Model<T> {
 
     protected Class<O> relatedClazz;
 
-    public AbstractHasOneBean(Class<T> clazz, Class<O> relatedClazz, boolean cache) {
+    public HasOneModel(Class<T> clazz, Class<O> relatedClazz, boolean cache) {
         super(clazz, cache);
         this.relatedClazz = relatedClazz;
     }
 
-    public AbstractHasOneBean(Class<T> clazz, Class<O> relatedClazz, boolean cache, Context context) {
+    public HasOneModel(Class<T> clazz, Class<O> relatedClazz, boolean cache, Context context) {
         super(clazz, cache, context);
         this.relatedClazz = relatedClazz;
     }
@@ -25,7 +25,7 @@ public abstract class AbstractHasOneBean<T, O> extends AbstractBean<T> {
         try {
             O dummy = relatedClazz.newInstance();
 
-            object = (O) ((AbstractBean) dummy).find(getRelatedId());
+            object = (O) ((Model) dummy).find(getRelatedId());
         } catch(IllegalAccessException e) {
             e.printStackTrace();
         } catch(InstantiationException e) {

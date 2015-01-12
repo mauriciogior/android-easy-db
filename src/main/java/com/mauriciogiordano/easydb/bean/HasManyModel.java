@@ -13,16 +13,16 @@ import java.util.List;
 /**
  * Created by mauricio on 12/7/14.
  */
-public abstract class AbstractHasManyBean<T, O> extends AbstractBean {
+public abstract class HasManyModel<T, O> extends Model {
 
     protected Class<O> childClazz;
 
-    public AbstractHasManyBean(Class<T> clazz, Class<O> childClazz, boolean cache) {
+    public HasManyModel(Class<T> clazz, Class<O> childClazz, boolean cache) {
         super(clazz, cache);
         this.childClazz = childClazz;
     }
 
-    public AbstractHasManyBean(Class<T> clazz, Class<O> childClazz, boolean cache, Context context) {
+    public HasManyModel(Class<T> clazz, Class<O> childClazz, boolean cache, Context context) {
         super(clazz, cache, context);
         this.childClazz = childClazz;
     }
@@ -53,7 +53,7 @@ public abstract class AbstractHasManyBean<T, O> extends AbstractBean {
 
         JSONArray objects = childrenList();
 
-        AbstractBean toPut = (AbstractBean) child;
+        Model toPut = (Model) child;
 
         if(indexOfChild(toPut.getId()) != -1) {
             return;
@@ -103,7 +103,7 @@ public abstract class AbstractHasManyBean<T, O> extends AbstractBean {
         List<O> children = new ArrayList<O>();
 
         try {
-            AbstractBean dummy = (AbstractBean) childClazz.newInstance();
+            Model dummy = (Model) childClazz.newInstance();
             dummy.setContext(context);
 
             for (int i = 0; i < objects.length(); i++) {
