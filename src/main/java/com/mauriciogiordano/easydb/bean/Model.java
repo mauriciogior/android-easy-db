@@ -8,6 +8,10 @@ import com.mauriciogiordano.easydb.helper.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +20,10 @@ import java.util.List;
  * Created by mauricio on 12/7/14.
  */
 public abstract class Model<T> {
+
+    @Target(ElementType.FIELD)
+    @Retention(RetentionPolicy.RUNTIME)
+    public static @interface ModelField { }
 
     protected Class<T> clazz;
     protected Context context;
@@ -56,9 +64,10 @@ public abstract class Model<T> {
 
         Field[] fields = clazz.getDeclaredFields();
 
-        for(int i=0; i<fields.length; i++) {
-            if(!allowedFields.contains(fields[i].getType().getSimpleName().toLowerCase())) {
-                throw new RuntimeException("Field '" + fields[i].getName() + "' has type '" + fields[i].getType().getSimpleName() + "' that is not allowed!");
+        for(Field field : fields) {
+            if(field.isAnnotationPresent(ModelField.class)
+            && !allowedFields.contains(field.getType().getSimpleName().toLowerCase())) {
+                throw new RuntimeException("Field '" + field.getName() + "' has type '" + field.getType().getSimpleName() + "' that is not allowed!");
             }
         }
 
@@ -107,35 +116,39 @@ public abstract class Model<T> {
             Field[] fields = clazz.getDeclaredFields();
 
             try {
-                for (int i = 0; i < fields.length; i++) {
+                for (Field field : fields) {
 
-                    String name = fields[i].getName();
-                    boolean was = fields[i].isAccessible();
+                    if(!field.isAnnotationPresent(ModelField.class)) {
+                        continue;
+                    }
 
-                    fields[i].setAccessible(true);
+                    String name = field.getName();
+                    boolean was = field.isAccessible();
 
-                    switch (toFieldEnum(fields[i].getType().getSimpleName().toLowerCase())) {
+                    field.setAccessible(true);
+
+                    switch (toFieldEnum(field.getType().getSimpleName().toLowerCase())) {
                         case INT:
-                            fields[i].setInt(object, json.optInt(name, 0));
+                            field.setInt(object, json.optInt(name, 0));
                             break;
                         case LONG:
-                            fields[i].setLong(object, json.optLong(name, 0));
+                            field.setLong(object, json.optLong(name, 0));
                             break;
                         case FLOAT:
-                            fields[i].setFloat(object, json.optLong(name, 0));
+                            field.setFloat(object, json.optLong(name, 0));
                             break;
                         case DOUBLE:
-                            fields[i].setDouble(object, json.optDouble(name, 0));
+                            field.setDouble(object, json.optDouble(name, 0));
                             break;
                         case STRING:
-                            fields[i].set(object, json.opt(name));
+                            field.set(object, json.opt(name));
                             break;
                         case BOOLEAN:
-                            fields[i].setBoolean(object, json.optBoolean(name, false));
+                            field.setBoolean(object, json.optBoolean(name, false));
                             break;
                     }
 
-                    fields[i].setAccessible(was);
+                    field.setAccessible(was);
                 }
             } catch(IllegalAccessException e) {
                 e.printStackTrace();
@@ -158,35 +171,39 @@ public abstract class Model<T> {
         Field[] fields = clazz.getDeclaredFields();
 
         try {
-            for (int i = 0; i < fields.length; i++) {
+            for (Field field : fields) {
 
-                String name = fields[i].getName();
-                boolean was = fields[i].isAccessible();
+                if(!field.isAnnotationPresent(ModelField.class)) {
+                    continue;
+                }
 
-                fields[i].setAccessible(true);
+                String name = field.getName();
+                boolean was = field.isAccessible();
 
-                switch (toFieldEnum(fields[i].getType().getSimpleName().toLowerCase())) {
+                field.setAccessible(true);
+
+                switch (toFieldEnum(field.getType().getSimpleName().toLowerCase())) {
                     case INT:
-                        json.put(name, fields[i].getInt(this));
+                        json.put(name, field.getInt(this));
                         break;
                     case LONG:
-                        json.put(name, fields[i].getLong(this));
+                        json.put(name, field.getLong(this));
                         break;
                     case FLOAT:
-                        json.put(name, fields[i].getFloat(this));
+                        json.put(name, field.getFloat(this));
                         break;
                     case DOUBLE:
-                        json.put(name, fields[i].getDouble(this));
+                        json.put(name, field.getDouble(this));
                         break;
                     case STRING:
-                        json.put(name, fields[i].get(this));
+                        json.put(name, field.get(this));
                         break;
                     case BOOLEAN:
-                        json.put(name, fields[i].getBoolean(this));
+                        json.put(name, field.getBoolean(this));
                         break;
                 }
 
-                fields[i].setAccessible(was);
+                field.setAccessible(was);
             }
         } catch(IllegalAccessException e) {
             e.printStackTrace();

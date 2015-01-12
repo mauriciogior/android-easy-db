@@ -11,13 +11,18 @@ Currently this DB system uses the `SharedPreferences` mixed with `json` to store
 
 Up to this day it is only available simple collections with one-to-one and one-to-many relations.
 
+You need to use the annotation `@ModelField` for every database field.
+
 **User.java**
 ```java
-public class User extends AbstractHasManyBean {
+public class User extends HasManyModel {
     
+    @ModelField
     private String id = "";
+    @ModelField
     private String name = "";
 
+    // required empty constructor!
     public User() {
         // current class, related class, cache opt
         super(User.class, Note.class, true);
@@ -30,49 +35,23 @@ public class User extends AbstractHasManyBean {
         super(User.class, Note.class, true, context);
     }
 
-    public static User instanceFromJson(JSONObject json, Context context) {
-        User obj = new User(context);
-
-        try {
-            obj.setId(json.getString("id"));
-            obj.setName(json.getString("name"));
-        } catch(JSONException e) {
-            e.printStackTrace();
-        }
-
-        return obj;
-    }
-
-    public static User find(String id, Context context) {
-        User instance = new User(context);
-
-        return (User) instance.find(id);
-    }
-
-    @Override
-    public JSONObject toJson() {
-        JSONObject object = new JSONObject();
-
-        try {
-            object.put("id", id);
-            object.put("name", name);
-        } catch(JSONException e) {
-            e.printStackTrace();
-        }
-
-        return object;
-    }
-
-    @Override
-    public Namespace fromJson(JSONObject json) {
-        return Namespace.instanceFromJson(json, context);
-    }
-
     @Override
     public String getId() { return id;  }
     public void setId(String id) { this.id = id; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
+
+    public static User fromJson(JSONObject json, Context context) {
+        User dummy = new User(context);
+
+        return (User) dummy.fromJson(json);
+    }
+
+    public static User find(String id, Context context) {
+        User dummy = new User(context);
+
+        return (User) dummy.find(id);
+    }
 }
 ```
 
@@ -80,10 +59,14 @@ public class User extends AbstractHasManyBean {
 ```java
 public class Note extends AbstractBean {
     
+    @ModelField
     private String id = "";
+    @ModelField
     private String title = "";
+    @ModelField
     private String content = "";
 
+    // required empty constructor!
     public Note() {
         // current class, cache opt
         super(Note.class, true);
@@ -96,46 +79,6 @@ public class Note extends AbstractBean {
         super(Note.class, true, context);
     }
 
-    public static Note instanceFromJson(JSONObject json, Context context) {
-        Note obj = new Note(context);
-
-        try {
-            obj.setId(json.getString("id"));
-            obj.setTitle(json.getString("title"));
-            obj.setContent(json.getString("content"));
-        } catch(JSONException e) {
-            e.printStackTrace();
-        }
-
-        return obj;
-    }
-
-    public static Note find(String id, Context context) {
-        Note instance = new Note(context);
-
-        return (Note) instance.find(id);
-    }
-
-    @Override
-    public JSONObject toJson() {
-        JSONObject object = new JSONObject();
-
-        try {
-            object.put("id", id);
-            object.put("title", title);
-            object.put("content", content);
-        } catch(JSONException e) {
-            e.printStackTrace();
-        }
-
-        return object;
-    }
-
-    @Override
-    public Note fromJson(JSONObject json) {
-        return Note.instanceFromJson(json, context);
-    }
-
     @Override
     public String getId() { return id;  }
     public void setId(String id) { this.id = id; }
@@ -143,6 +86,18 @@ public class Note extends AbstractBean {
     public void setTitle(String title) { this.title = title; }
     public String getContent() { return content; }
     public void setContent(String content) { this.content = content; }
+
+    public static Note fromJson(JSONObject json, Context context) {
+        Note dummy = new Note(context);
+
+        return (Note) dummy.fromJson(json);
+    }
+
+    public static Note find(String id, Context context) {
+        Note dummy = new Note(context);
+
+        return (Note) dummy.find(id);
+    }
 }
 ```
 
@@ -196,3 +151,5 @@ public class ExampleActivity extends Activity {
     }
 }
 ```
+
+There are also available some listeners, such as `OnUpdateListener`
