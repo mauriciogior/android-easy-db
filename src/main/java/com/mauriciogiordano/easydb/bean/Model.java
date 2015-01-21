@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 
 import com.mauriciogiordano.easydb.helper.JSONArray;
 
+import org.apache.commons.lang3.ClassUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -40,21 +41,15 @@ public abstract class Model<T> {
         BOOLEAN
     }
 
-    private final List<String> allowedFields = initAllowedFields();
     private static List<Class<?>> evaluated = new ArrayList<Class<?>>();
 
-    private final List<String> initAllowedFields() {
-        List<String> list = new ArrayList<String>();
+    private boolean isAllowed(Field field) {
+        if(ClassUtils.isPrimitiveOrWrapper(field.getType())
+        || CharSequence.class.isAssignableFrom(field.getType())) {
+            return true;
+        }
 
-        list.add("int");
-        list.add("integer");
-        list.add("long");
-        list.add("float");
-        list.add("double");
-        list.add("boolean");
-        list.add("string");
-
-        return list;
+        return false;
     }
 
     private void evaluateObject() {
@@ -66,7 +61,7 @@ public abstract class Model<T> {
 
         for(Field field : fields) {
             if(field.isAnnotationPresent(ModelField.class)
-            && !allowedFields.contains(field.getType().getSimpleName().toLowerCase())) {
+            && !isAllowed(field)) {
                 throw new RuntimeException("Field '" + field.getName() + "' has type '" + field.getType().getSimpleName() + "' that is not allowed!");
             }
         }
@@ -89,18 +84,20 @@ public abstract class Model<T> {
         evaluateObject();
     }
 
-    private static Fields toFieldEnum(String field) {
-        if(field.equals("int") || field.equals("integer")) {
+    private static Fields toFieldEnum(Class<?> clazz) {
+        String name = clazz.getSimpleName().toLowerCase();
+
+        if(name.equals("int") || name.equals("integer")) {
             return Fields.INT;
-        } else if(field.equals("long")) {
+        } else if(name.equals("long")) {
             return Fields.LONG;
-        } else if(field.equals("float")) {
+        } else if(name.equals("float")) {
             return Fields.FLOAT;
-        } else if(field.equals("double")) {
+        } else if(name.equals("double")) {
             return Fields.DOUBLE;
-        } else if(field.equals("string")) {
+        } else if(CharSequence.class.isAssignableFrom(clazz)) {
             return Fields.STRING;
-        } else if(field.equals("boolean")) {
+        } else if(name.equals("boolean")) {
             return Fields.BOOLEAN;
         } else {
             throw new RuntimeException("Field not found!");
@@ -112,6 +109,7 @@ public abstract class Model<T> {
 
         try {
             object = clazz.newInstance();
+            ((Model) object).setContext(context);
 
             Field[] fields = clazz.getDeclaredFields();
 
@@ -127,7 +125,7 @@ public abstract class Model<T> {
 
                     field.setAccessible(true);
 
-                    switch (toFieldEnum(field.getType().getSimpleName().toLowerCase())) {
+                    switch (toFieldEnum(field.getType())) {
                         case INT:
                             field.setInt(object, json.optInt(name, 0));
                             break;
@@ -160,8 +158,6 @@ public abstract class Model<T> {
             e.printStackTrace();
         }
 
-        ((Model<T>) object).setContext(context);
-
         return object;
     }
 
@@ -182,7 +178,7 @@ public abstract class Model<T> {
 
                 field.setAccessible(true);
 
-                switch (toFieldEnum(field.getType().getSimpleName().toLowerCase())) {
+                switch (toFieldEnum(field.getType())) {
                     case INT:
                         json.put(name, field.getInt(this));
                         break;
@@ -332,6 +328,7 @@ public abstract class Model<T> {
             if(json == null) return null;
 
             object = new JSONObject(json);
+
         } catch(JSONException e) {
             e.printStackTrace();
         }
@@ -340,21 +337,21 @@ public abstract class Model<T> {
     }
 
     /* Listeners */
-    protected ModelListenerHandler modelListenerHandler;
+    protected final ModelListenerHandler modelListenerHandler = ModelListenerHandler.getInstance();
 
     public static abstract class OnUpdateListener {
-        public abstract void onUpdate(Model object, ModelListenerHandler.Status status);
-    }
-
-    private static class ModelListenerHandler {
-
-        public List<OnUpdateListener> onUpdateListeners;
-
         public enum Status {
             CREATED,
             UPDATED,
             REMOVED
         }
+
+        public abstract void onUpdate(Model object, Status status);
+    }
+
+    private static class ModelListenerHandler {
+
+        public List<OnUpdateListener> onUpdateListeners;
 
         private static ModelListenerHandler modelListenerHandler = null;
 
@@ -370,7 +367,7 @@ public abstract class Model<T> {
             onUpdateListeners = new ArrayList<OnUpdateListener>();
         }
 
-        protected void execOnUpdateListeners(Model target, Status status) {
+        protected void execOnUpdateListeners(Model target, OnUpdateListener.Status status) {
             int size = onUpdateListeners.size();
 
             for(int i = 0; i < size; i++) {

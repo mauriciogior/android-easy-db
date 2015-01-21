@@ -61,6 +61,8 @@ public abstract class HasManyModel<T, O> extends Model {
 
         objects.put(toPut.getId());
 
+        toPut.save();
+
         prefs.edit().putString(String.valueOf(getId()), objects.toString()).commit();
     }
 
@@ -95,6 +97,29 @@ public abstract class HasManyModel<T, O> extends Model {
         prefs.edit().putString(String.valueOf(getId()), objects.toString()).commit();
 
         return false;
+    }
+
+    public O findChild(Object id) {
+        int index = indexOfChild(id);
+
+        if(index == -1) {
+            return null;
+        }
+
+        O child = null;
+
+        try {
+            Model dummy = (Model) childClazz.newInstance();
+            dummy.setContext(context);
+
+            child = (O) dummy.find(id);
+        } catch (InstantiationException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        }
+
+        return child;
     }
 
     public List<O> findAllChildren() {

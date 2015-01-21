@@ -15,7 +15,7 @@ You need to use the annotation `@ModelField` for every database field.
 
 **User.java**
 ```java
-public class User extends HasManyModel {
+public class User extends HasManyModel<User, Note> {
     
     @ModelField
     private String id = "";
@@ -44,20 +44,20 @@ public class User extends HasManyModel {
     public static User fromJson(JSONObject json, Context context) {
         User dummy = new User(context);
 
-        return (User) dummy.fromJson(json);
+        return dummy.fromJson(json);
     }
 
     public static User find(String id, Context context) {
         User dummy = new User(context);
 
-        return (User) dummy.find(id);
+        return dummy.find(id);
     }
 }
 ```
 
 **Note.java**
 ```java
-public class Note extends AbstractBean {
+public class Note extends Model<Note> {
     
     @ModelField
     private String id = "";
@@ -90,13 +90,13 @@ public class Note extends AbstractBean {
     public static Note fromJson(JSONObject json, Context context) {
         Note dummy = new Note(context);
 
-        return (Note) dummy.fromJson(json);
+        return dummy.fromJson(json);
     }
 
     public static Note find(String id, Context context) {
         Note dummy = new Note(context);
 
-        return (Note) dummy.find(id);
+        return dummy.find(id);
     }
 }
 ```
