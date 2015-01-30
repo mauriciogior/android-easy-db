@@ -1,4 +1,6 @@
 apply plugin: 'com.android.library'
+apply plugin: 'maven'
+apply plugin: 'signing'
 
 android {
     compileSdkVersion 19
@@ -9,7 +11,7 @@ android {
         minSdkVersion 8
         targetSdkVersion 19
         versionCode 1
-        versionName "1.0"
+        versionName "0.1.0"
     }
     buildTypes {
         release {
@@ -21,4 +23,74 @@ android {
 
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
+}
+
+task sourcesJar(type: Jar) {
+    classifier = 'sources'
+    from android.sourceSets.main.java
+}
+
+task androidJavadocs(type: Javadoc) {
+    source = android.sourceSets.main.java
+    classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+}
+
+task androidJavadocsJar(type: Jar) {
+    classifier = 'javadoc'
+    from androidJavadocs.destinationDir
+}
+
+artifacts {
+    archives androidJavadocsJar, sourcesJar
+}
+
+signing {
+    sign configurations.archives
+}
+
+group = "com.mauriciogiordano"
+archivesBaseName = "easydb"
+version = "0.1.0"
+
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+
+            repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
+                authentication(userName: ossrhUsername, password: ossrhPassword)
+            }
+
+            snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
+                authentication(userName: ossrhUsername, password: ossrhPassword)
+            }
+
+            pom.project {
+                name 'Android EasyDB'
+                packaging 'aar'
+                description 'A simple and lightweight database made for Android'
+                url 'https://github.com/mauriciogior/android-easy-db'
+
+                scm {
+                    url 'https://github.com/mauriciogior/android-easy-db'
+                    connection 'scm:git:https://github.com/mauriciogior/android-easy-db.git'
+                }
+
+                licenses {
+                    license {
+                        name 'GNU GENERAL PUBLIC LICENSE, VERSION 2'
+                        url 'http://www.gnu.org/licenses/gpl-2.0.html'
+                    }
+                }
+
+                developers {
+                    developer {
+                        id 'mauriciogior'
+                        name 'Mauricio Giordano'
+                        email 'mauricio.c.giordano@gmail.com'
+                    }
+                }
+            }
+        }
+    }
 }
