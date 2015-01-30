@@ -280,6 +280,18 @@ public abstract class Model<T> {
     }
 
     /*
+     * Overrides the toString method.
+     * Returns a readable version of the object.
+     *
+     * @return {String}
+     * @api public
+     */
+    @Override
+    public String toString() {
+        return toJson().toString();
+    }
+
+    /*
      * Sets the context for the current instance.
      *
      * @param {Context}
