@@ -3,7 +3,11 @@ A simple and easy database system developed for Android.
 
 ### Installation
 
-This repository is not included yet on the OSS, so you need to clone it and include as a module on `Android Studio`.
+Using maven you can include the repository `com.mauriciogiordano:easydb:0.1.0`.
+
+In gradle using maven `compile "com.mauriciogiordano:easydb:0.1.0"`.
+
+The JAR can be [found here](http://search.maven.org/remotecontent?filepath=com/mauriciogiordano/easydb/0.1.0/easydb-0.1.0-sources.jar`)
 
 ## Quick Usage
 
