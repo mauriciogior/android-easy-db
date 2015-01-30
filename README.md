@@ -156,4 +156,74 @@ public class ExampleActivity extends Activity {
 }
 ```
 
+## API
+
+### model.fromJson
+
+Creates an object from a JSON representation. To access it statically, you need to create a dummy instance.
+
+```java
+User user = User.fromJson(new JSONObject({ "id" : "1", "name" : "example" }));
+user.setContext(context); // required if doing any operation like #save, #remove, etc.
+```
+
+### model.toJson()
+
+Returns a representation of the object in JSON format.
+
+```java
+System.out.println(user.toJson()); // outputs: { "id" : "1", "name" : "example" }
+```
+
+### model.find(String id)
+
+Finds an object with id `id`. To access it statically, you need to create a dummy instance.
+
+```java
+User user = User.find("1");
+user.setContext(context); // required if doing any operation like #save, #remove, etc.
+```
+
+### model.findAll()
+
+Finds all object of that model. You need to create a dummy instance.
+
+```java
+List<User> userList = User.findAll();
+```
+
+### model.save()
+
+Saves the object.
+
+```java
+user.save();
+```
+
+### model.remove()
+
+Removes the object.
+
+```java
+user.remove();
+```
+
+### model.addOnUpdateListener(onUpdateListener)
+
+Adds an onUpdateListener that will be triggered whenever the object is CREATED|UPDATED|REMOVED.
+
+```java
+user.addOnUpdateListener(new OnUpdateListener {
+    @Override
+    public void onUpdate(Model model, Status status) {
+        ...
+    }
+});
+```
+
+## TODO
+
+* Support **id** of any class that implements `Comparable`.
+* Allow **context** as parameter for `model.find, model.findAll, etc`.
+
 There are also available some listeners, such as `OnUpdateListener`
