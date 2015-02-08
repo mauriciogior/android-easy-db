@@ -3,6 +3,8 @@ package com.mauriciogiordano.easydb.bean;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import com.mauriciogiordano.easydb.exception.NoContextFoundException;
+
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -20,26 +22,27 @@ import java.util.List;
 
 public abstract class Model<T> {
 
-    /*
+    /**
      * Annotation used to identify a field that should be stored.
      */
     @Target(ElementType.FIELD)
     @Retention(RetentionPolicy.RUNTIME)
     public static @interface ModelField { }
 
-    /*
+    /**
      * Configuration variables.
      */
     protected Class<T> clazz;
     protected Context context;
     
-    /*
+    /**
      * Cache related.
      */
     protected boolean cache;
     private List<T> cachedObjects = null;
+    private List<String> cachedIds = null;
 
-    /*
+    /**
      * Available fields for storage.
      * TODO: Allow anything that extends Serializable. 
      */
@@ -52,57 +55,58 @@ public abstract class Model<T> {
         BOOLEAN
     }
 
-    /*
+    /**
      * List of evaluated classes.
      * This avoids evaluating every time a new instance is created. 
      */
     private static List<Class<?>> evaluatedClasses = new ArrayList<Class<?>>();
 
-    /*
+    /**
      * Verifies if the given field follow the rules.
      *  
-     * @param {Field} field
-     * @return {boolean}
-     * @api private
+     * @param field Field to be verified
+     * @return True if field is allowed and false otherwise.
      */
     private boolean isAllowed(Field field) {
         return ClassUtils.isPrimitiveOrWrapper(field.getType())
                 || CharSequence.class.isAssignableFrom(field.getType());
     }
 
-    /*
+    /**
      * Evaluates the object if not yet evaluated.
      *  
-     * @throws {RuntimeException} in case object don't follow the rules.
-     * @api private 
+     * @throws RuntimeException in case object don't follow the rules.
      */
     private void evaluateObject() {
-        if(evaluatedClasses.contains(clazz)) {
+        if (evaluatedClasses.contains(clazz)) {
             return;
         }
 
         Field[] fields = clazz.getDeclaredFields();
 
-        for(Field field : fields) {
-            if(field.isAnnotationPresent(ModelField.class)
+        for (Field field : fields) {
+            if (field.isAnnotationPresent(ModelField.class)
             && !isAllowed(field)) {
-                throw new RuntimeException("Field '" + field.getName() + "' has type '" + field.getType().getSimpleName() + "' that is not allowed!");
+                throw new RuntimeException("Field '"
+                        + field.getName()
+                        + "' has type '" + field.getType().getSimpleName()
+                        + "' that is not allowed!");
             }
         }
 
         evaluatedClasses.add(clazz);
     }
 
-    /*
+    /**
      * Default constructor, but all inherited objects should have...
      * an empty constructor for Reflection.
      * 
      * If this constructor is called, it is necessary to run...
-     * setContext() afterwards.
+     * setContext() afterwards for context related operations (save...
+     * , find, etc)
      *  
-     * @param {Class<T>}
-     * @param {boolean}
-     * @api public
+     * @param clazz The class that will be used.
+     * @param cache Should cache the objects.
      */
     public Model(Class<T> clazz, boolean cache) {
         this.clazz = clazz;
@@ -111,14 +115,13 @@ public abstract class Model<T> {
         evaluateObject();
     }
 
-    /*
+    /**
      * All inherited objects should have an empty constructor...
      * for Reflection.
      *
-     * @param {Class<T>}
-     * @param {boolean}
-     * @param {Context}
-     * @api public
+     * @param clazz The class that will be used.
+     * @param cache Should cache the objects.
+     * @param context Application context to use inside sharedPreferences.
      */
     public Model(Class<T> clazz, boolean cache, Context context) {
         this.clazz = clazz;
@@ -128,43 +131,42 @@ public abstract class Model<T> {
         evaluateObject();
     }
 
-    /*
+    /**
      * Return a Fields object for a given field's Class.
      *
-     * @param {Class<T>}
-     * @return {Fields}
-     * @api private
+     * @param clazz The class that will be used.
+     * @throws RuntimeException in case the field type is not found.
+     * @return A Fields type if found.
      */
     private static Fields toFieldEnum(Class<?> clazz) {
         String name = clazz.getSimpleName().toLowerCase();
 
-        if(name.equals("int") || name.equals("integer")) {
+        if (name.equals("int") || name.equals("integer")) {
             return Fields.INT;
-        } else if(name.equals("long")) {
+        } else if (name.equals("long")) {
             return Fields.LONG;
-        } else if(name.equals("float")) {
+        } else if (name.equals("float")) {
             return Fields.FLOAT;
-        } else if(name.equals("double")) {
+        } else if (name.equals("double")) {
             return Fields.DOUBLE;
-        } else if(CharSequence.class.isAssignableFrom(clazz)) {
+        } else if (CharSequence.class.isAssignableFrom(clazz)) {
             return Fields.STRING;
-        } else if(name.equals("boolean")) {
+        } else if (name.equals("boolean")) {
             return Fields.BOOLEAN;
         } else {
             throw new RuntimeException("Field not found!");
         }
     }
 
-    /*
+    /**
      * Analyzes the entire json object and creates a brand-new...
      * instance from its representation. 
      *
      * TODO: Figure out how to make this accesible without...
      *       creating a dummy instance.
      *  
-     * @param {JSONObject}
-     * @return {T}
-     * @api public
+     * @param json The JSONObject representation of the object.
+     * @return The object T if able to convert and null otherwise.
      */
     public T fromJson(JSONObject json) {
         T object = null;
@@ -178,7 +180,7 @@ public abstract class Model<T> {
             try {
                 for (Field field : fields) {
 
-                    if(!field.isAnnotationPresent(ModelField.class)) {
+                    if (!field.isAnnotationPresent(ModelField.class)) {
                         continue;
                     }
 
@@ -210,25 +212,24 @@ public abstract class Model<T> {
 
                     field.setAccessible(was);
                 }
-            } catch(IllegalAccessException e) {
+            } catch (IllegalAccessException e) {
                 e.printStackTrace();
             }
 
-        } catch(IllegalAccessException e) {
+        } catch (IllegalAccessException e) {
             e.printStackTrace();
-        } catch(InstantiationException e) {
+        } catch (InstantiationException e) {
             e.printStackTrace();
         }
 
         return object;
     }
 
-    /*
+    /**
      * Analyzes the entire object and creates a brand-new json...
      * representation.
      *
-     * @return {JSONObject}
-     * @api public
+     * @return The JSONObject representation of the object.
      */
     public JSONObject toJson() {
         JSONObject json = new JSONObject();
@@ -238,7 +239,7 @@ public abstract class Model<T> {
         try {
             for (Field field : fields) {
 
-                if(!field.isAnnotationPresent(ModelField.class)) {
+                if (!field.isAnnotationPresent(ModelField.class)) {
                     continue;
                 }
 
@@ -270,49 +271,46 @@ public abstract class Model<T> {
 
                 field.setAccessible(was);
             }
-        } catch(IllegalAccessException e) {
+        } catch (IllegalAccessException e) {
             e.printStackTrace();
-        } catch(JSONException e) {
+        } catch (JSONException e) {
             e.printStackTrace();
         }
 
         return json;
     }
 
-    /*
+    /**
      * Overrides the toString method.
      * Returns a readable version of the object.
      *
-     * @return {String}
-     * @api public
+     * @return The string representation of the object (in json format).
      */
     @Override
     public String toString() {
         return toJson().toString();
     }
 
-    /*
+    /**
      * Sets the context for the current instance.
      *
-     * @param {Context}
-     * @api public
+     * @param context Sets the application context for the current instance.
      */
     public void setContext(Context context) {
         this.context = context;
     }
 
-    /*
+    /**
      * Loads a reference to the SharedPreferences for a given...
      * namespace.
      *
-     * @param String namespace
-     * @return {SharedPreferences}
-     * @throws {RuntimeException} in case of null context.
-     * @api protected
+     * @param namespace The namespace to be used.
+     * @return The sharedPreferences object.
+     * @throws com.mauriciogiordano.easydb.exception.NoContextFoundException in case of null context.
      */
     protected SharedPreferences loadSharedPreferences(String namespace) {
-        if(context == null) {
-            throw new RuntimeException("A context is needed to operate this object! Have you used Model#setContext?");
+        if (context == null) {
+            throw new NoContextFoundException();
         }
         
         return context.getSharedPreferences(clazz.getPackage().getName()
@@ -320,97 +318,27 @@ public abstract class Model<T> {
                 Context.MODE_PRIVATE);
     }
 
-    /*
-     * Saves the current object.
-     *
-     * @throws {RuntimeException} in case of null context.
-     * @api public
-     */
-    public synchronized void save() {
-        SharedPreferences prefs = loadSharedPreferences("object");
-
-        if(find(getId()) == null) {
-            addObject();
-
-            modelListenerHandler.execOnUpdateListeners(this, OnUpdateListener.Status.CREATED);
-            
-            if(cache && cachedObjects != null) {
-                cachedObjects.add((T) this);
-            }
-        } else {
-            modelListenerHandler.execOnUpdateListeners(this, OnUpdateListener.Status.UPDATED);
-        }
-        
-        prefs.edit().putString(String.valueOf(getId()), toJson().toString()).commit();
-    }
-
-    /*
-     * Removes the current object.
-     *
-     * @throws {RuntimeException} in case of null context.
-     * @api public
-     */
-    public synchronized void remove() {
-        SharedPreferences prefs = loadSharedPreferences("object");
-
-        if(find(getId()) != null) {
-            removeObject();
-
-            modelListenerHandler.execOnUpdateListeners(this, OnUpdateListener.Status.REMOVED);
-            
-            prefs.edit().putString(String.valueOf(getId()), null).commit();
-        }
-    }
-
-    /*
-     * Find all objects of type T.
-     * 
-     * TODO: Add offset. 
-     *
-     * @return {List<T>}
-     * @throws {RuntimeException} in case of null context.
-     * @api public
-     */
-    public List<T> findAll() {
-        if(cache && cachedObjects != null) {
-            return cachedObjects;
-        }
-
-        List<String> ids = getObjectList();
-
-        List<T> listT = new ArrayList<T>();
-
-        for(String id : ids) {
-            listT.add(find(id));
-        }
-
-        if(cache) {
-            cachedObjects = listT;
-        }
-
-        return listT;
-    }
-
-    /*
+    /**
      * Get a list of objects ids.
      *
-     * @return {List<String>}
-     * @throws {RuntimeException} in case of null context.
-     * @api private
+     * @return The list of all object ids.
+     * @throws com.mauriciogiordano.easydb.exception.NoContextFoundException in case of null context.
      */
     private List<String> getObjectList() {
+        if (cachedIds != null) return cachedIds;
+
         SharedPreferences prefs = loadSharedPreferences("objectList");
 
         String list = prefs.getString("list", null);
 
-        return (list == null) ? Arrays.asList(new String[0]) : Arrays.asList(list.split(","));
+        cachedIds = (list == null) ? new ArrayList<String>() : new ArrayList<>(Arrays.asList(list.split(",")));
+        return cachedIds;
     }
 
-    /*
+    /**
      * Adds the object to the ids list.
      *
-     * @throws {RuntimeException} in case of null context.
-     * @api private
+     * @throws com.mauriciogiordano.easydb.exception.NoContextFoundException in case of null context.
      */
     private void addObject() {
         SharedPreferences prefs = loadSharedPreferences("objectList");
@@ -421,38 +349,87 @@ public abstract class Model<T> {
         prefs.edit().putString("list", StringUtils.join(objects, ",")).commit();
     }
 
-    /*
+    /**
      * Removes the object from the ids list.
      *
-     * @throws {RuntimeException} in case of null context.
-     * @api private
+     * @throws com.mauriciogiordano.easydb.exception.NoContextFoundException in case of null context.
+     * @return True if removed successfully and false otherwise.
      */
-    private void removeObject() {
+    private boolean removeObject() {
         SharedPreferences prefs = loadSharedPreferences("objectList");
 
         List<String> objects = getObjectList();
         
         int index = objects.indexOf(getId());
         
-        if(index == ArrayUtils.INDEX_NOT_FOUND) return;
-        
-        objects.remove(index);
+        if (index == ArrayUtils.INDEX_NOT_FOUND) return false;
 
-        prefs.edit().putString("list", StringUtils.join(objects, ",")).commit();
+        objects.remove(getId());
+
+        if (objects.size() == 0) {
+            prefs.edit().putString("list", null).commit();
+        } else {
+            prefs.edit().putString("list", StringUtils.join(objects, ",")).commit();
+        }
+
+        return true;
     }
 
-    /*
+    /**
+     * Saves the current object.
+     *
+     * @throws com.mauriciogiordano.easydb.exception.NoContextFoundException in case of null context.
+     */
+    public synchronized void save() {
+        SharedPreferences prefs = loadSharedPreferences("object");
+
+        if (find(getId()) == null) {
+            addObject();
+
+            modelListenerHandler.execOnUpdateListeners(this, OnUpdateListener.Status.CREATED);
+
+            if (cache && cachedObjects != null) {
+                cachedObjects.add((T) this);
+            }
+        } else {
+            modelListenerHandler.execOnUpdateListeners(this, OnUpdateListener.Status.UPDATED);
+        }
+
+        prefs.edit().putString(String.valueOf(getId()), toJson().toString()).commit();
+    }
+
+    /**
+     * Removes the current object.
+     *
+     * @throws com.mauriciogiordano.easydb.exception.NoContextFoundException in case of null context.
+     */
+    public synchronized boolean remove() {
+        SharedPreferences prefs = loadSharedPreferences("object");
+
+        if (find(getId()) != null) {
+            if (!removeObject()) return false;
+
+            modelListenerHandler.execOnUpdateListeners(this, OnUpdateListener.Status.REMOVED);
+
+            prefs.edit().putString(String.valueOf(getId()), null).commit();
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
      * Find a specific object from its id.
      *
      * TODO: Figure out how to make this accesible without...
      *       creating a dummy instance.
      *
-     * @param {String}
-     * @return {T} 
-     * @throws {RuntimeException} in case of null context.
-     * @api private
+     * @param id Object's id.
+     * @return The object if found, null otherwise.
+     * @throws com.mauriciogiordano.easydb.exception.NoContextFoundException in case of null context.
      */
-    public T find(Object id) {
+    public T find(String id) {
         SharedPreferences prefs = loadSharedPreferences("object");
 
         JSONObject object = null;
@@ -460,35 +437,61 @@ public abstract class Model<T> {
         try {
             String json = prefs.getString(String.valueOf(id), null);
 
-            if(json == null) return null;
+            if (json == null) return null;
 
             object = new JSONObject(json);
 
-        } catch(JSONException e) {
+        } catch (JSONException e) {
             e.printStackTrace();
         }
 
         return fromJson(object);
     }
 
-    /*
+    /**
+     * Find all objects of type T.
+     *
+     * TODO: Add offset.
+     *
+     * @return A list of all objects on the database.
+     * @throws com.mauriciogiordano.easydb.exception.NoContextFoundException in case of null context.
+     */
+    public List<T> findAll() {
+        if (cache && cachedObjects != null) {
+            return cachedObjects;
+        }
+
+        List<String> ids = getObjectList();
+
+        List<T> listT = new ArrayList<>();
+
+        for (String id : ids) {
+            listT.add(find(id));
+        }
+
+        if (cache) {
+            cachedObjects = listT;
+        }
+
+        return listT;
+    }
+
+    /**
      * Handles all listeners.
      */
     protected final ModelListenerHandler modelListenerHandler = new ModelListenerHandler();
 
-    /*
+    /**
      * Listeners.
      */
 
-    /*
+    /**
      * Listener that should be triggered whenever the object...
-     * is CREATED, UPDATED or REMOVED. 
-     *  
-     * @api public
+     * is CREATED, UPDATED or REMOVED.
      */
     public static abstract class OnUpdateListener {
 
-        /*
+        /**
          * Possible statuses.
          */
         public enum Status {
@@ -497,20 +500,17 @@ public abstract class Model<T> {
             REMOVED
         }
 
-        /*
+        /**
          * Run the listener. 
          * 
-         * @param {Model}
-         * @param {Status}
-         * @api private
+         * @param object The object that was modified.
+         * @param status What happened to the object.
          */
         public abstract void onUpdate(Model object, Status status);
     }
 
-    /*
+    /**
      * Listener handler.
-     *
-     * @api private
      */
     private class ModelListenerHandler {
 
@@ -520,49 +520,45 @@ public abstract class Model<T> {
             onUpdateListeners = new ArrayList<OnUpdateListener>();
         }
 
-        /*
+        /**
          * Triggers all listeners listening to this object.
          *
-         * @param {Model}
-         * @param {Status}
-         * @api private
+         * @param target The object that was modified.
+         * @param status What happened to the object.
          */
         protected void execOnUpdateListeners(Model target, OnUpdateListener.Status status) {
-            for(OnUpdateListener onUpdateListener : onUpdateListeners) {
+            for (OnUpdateListener onUpdateListener : onUpdateListeners) {
                 onUpdateListener.onUpdate(target, status);
             }
         }
     }
 
-    /*
+    /**
      * Add a new update listener.
      *
-     * @param {OnUpdateListener}
-     * @api public
+     * @param onUpdateListener The listener.
      */
     public void addOnUpdateListener(OnUpdateListener onUpdateListener) {
         modelListenerHandler.onUpdateListeners.add(onUpdateListener);
     }
 
-    /*
+    /**
      * Remove an update listener.
      *
-     * @param {OnUpdateListener}
-     * @api public
+     * @param onUpdateListener The listener.
      */
     public void removeOnUpdateListener(OnUpdateListener onUpdateListener) {
         modelListenerHandler.onUpdateListeners.remove(onUpdateListener);
     }
 
-    /*
+    /**
      * Abstract methods.
      */
 
-    /*
+    /**
      * Returns the object id.
      *  
-     * @return {String} 
-     * @api public
+     * @return The object's id.
      */
     public abstract String getId();
 }

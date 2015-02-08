@@ -3,116 +3,178 @@ package com.mauriciogiordano.easydb.bean;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-import com.mauriciogiordano.easydb.helper.JSONArray;
-
-import org.json.JSONException;
+import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
-/**
- * Created by mauricio on 12/7/14.
- */
-public abstract class HasManyModel<T, O> extends Model {
+public abstract class HasManyModel<F, C> extends Model {
 
-    protected Class<O> childClazz;
+    /**
+     * Configuration variables.
+     */
+    protected Class<C> childClazz;
 
-    public HasManyModel(Class<T> clazz, Class<O> childClazz, boolean cache) {
-        super(clazz, cache);
+    /**
+     * Cache related.
+     */
+    private List<String> childrenList = null;
+
+    /**
+     * Default constructor, but all inherited objects should have an empty constructor for...
+     * Reflection.
+     *
+     * If this constructor is called, it is necessary to run setContext() afterwards for context..
+     * related operations (save, find, etc).
+     *
+     * @param fatherClazz The father's class.
+     * @param childClazz The child's class.
+     * @param cache Should cache the objects.
+     */
+    public HasManyModel(Class<F> fatherClazz, Class<C> childClazz, boolean cache) {
+        super(fatherClazz, cache);
         this.childClazz = childClazz;
     }
 
-    public HasManyModel(Class<T> clazz, Class<O> childClazz, boolean cache, Context context) {
-        super(clazz, cache, context);
+    /**
+     * All inherited objects should have an empty constructor for Reflection.
+     *
+     * @param fatherClazz The father's class.
+     * @param childClazz The child's class.
+     * @param cache Should cache the objects.
+     * @param context Application context to use inside sharedPreferences.
+     */
+    public HasManyModel(Class<F> fatherClazz, Class<C> childClazz, boolean cache, Context context) {
+        super(fatherClazz, cache, context);
         this.childClazz = childClazz;
     }
 
-    private JSONArray childrenList() {
+    /**
+     * Get a list of child objects ids.
+     *
+     * @throws com.mauriciogiordano.easydb.exception.NoContextFoundException in case of null..
+     * context.
+     * @return List of all children.
+     */
+    private List<String> getChildrenList() {
+        if (childrenList != null) return childrenList;
+
         SharedPreferences prefs = loadSharedPreferences("children");
 
-        String list = prefs.getString(String.valueOf(getId()), null);
+        String list = prefs.getString(getId(), null);
 
-        JSONArray objects = null;
-
-        if(list == null) {
-            objects = new JSONArray();
-        } else {
-            try {
-                objects = new JSONArray(list);
-            } catch(JSONException e) {
-                e.printStackTrace();
-                throw new RuntimeException("Something very wrong just happened! \n" + list);
-            }
-        }
-
-        return objects;
+        childrenList = (list == null) ? new ArrayList<String>() : new ArrayList<>(Arrays.asList(list.split(",")));
+        return childrenList;
     }
 
-    public void addChild(O child) {
+    /**
+     * Returns the index of a specific child.
+     * Although it's a public api, it is useless outside of the class. (turn it private?)
+     *
+     * @param id The child's id.
+     * @throws com.mauriciogiordano.easydb.exception.NoContextFoundException in case of null context.
+     * @return The index of the child.
+     */
+    public int indexOfChild(String id) {
+        return getChildrenList().indexOf(id);
+    }
+
+    /**
+     * Adds the object to the child ids list.
+     *
+     * @param child The child to be added.
+     * @throws com.mauriciogiordano.easydb.exception.NoContextFoundException in case of null context.
+     */
+    public void addChild(C child) {
         SharedPreferences prefs = loadSharedPreferences("children");
 
-        JSONArray objects = childrenList();
+        List<String> objects = getChildrenList();
 
         Model toPut = (Model) child;
 
-        if(indexOfChild(toPut.getId()) != -1) {
+        if (objects.indexOf(toPut.getId()) != ArrayUtils.INDEX_NOT_FOUND) {
             return;
         }
 
-        objects.put(toPut.getId());
+        objects.add(toPut.getId());
 
         toPut.save();
 
-        prefs.edit().putString(String.valueOf(getId()), objects.toString()).commit();
+        prefs.edit().putString(String.valueOf(getId()), StringUtils.join(objects, ",")).commit();
     }
 
-    public int indexOfChild(Object id) {
-        JSONArray objects = childrenList();
-
-        for(int i = 0; i < objects.length(); i++) {
-            try {
-                if(objects.get(i).equals(id)) {
-                    return i;
-                }
-            } catch(JSONException e) {
-                e.printStackTrace();
-            }
-        }
-
-        return -1;
-    }
-
-    public boolean removeChild(Object id) {
+    /**
+     * Removes the object from the child ids list.
+     *
+     * @param id The child's id to be removed.
+     * @throws com.mauriciogiordano.easydb.exception.NoContextFoundException in case of null context.
+     * @return True if removed successfully and false otherwise.
+     */
+    public boolean removeChild(String id) {
         SharedPreferences prefs = loadSharedPreferences("children");
 
-        JSONArray objects = childrenList();
+        List<String> objects = getChildrenList();
 
-        int index = indexOfChild(id);
-
-        if(index == -1) {
+        if (objects.indexOf(id) == ArrayUtils.INDEX_NOT_FOUND) {
             return false;
         }
 
-        objects.pop(index);
-        prefs.edit().putString(String.valueOf(getId()), objects.toString()).commit();
+        objects.remove(id);
+        prefs.edit().putString(String.valueOf(getId()), StringUtils.join(objects, ",")).commit();
 
-        return false;
+        return true;
     }
 
-    public O findChild(Object id) {
-        int index = indexOfChild(id);
+    /**
+     * Removes the object from the child ids list.
+     *
+     * @param object The child to be removed
+     * @throws com.mauriciogiordano.easydb.exception.NoContextFoundException in case of null context.
+     * @return True if removed successfully and false otherwise.
+     */
+    public boolean removeChild(C object) {
+        SharedPreferences prefs = loadSharedPreferences("children");
 
-        if(index == -1) {
+        List<String> objects = getChildrenList();
+
+        String id = ((Model) object).getId();
+
+        if (objects.indexOf(id) == ArrayUtils.INDEX_NOT_FOUND) {
+            return false;
+        }
+
+        objects.remove(id);
+        prefs.edit().putString(String.valueOf(getId()), StringUtils.join(objects, ",")).commit();
+
+        return true;
+    }
+
+    /**
+     * Find a specific object from the child list.
+     *
+     * TODO: Figure out how to make this accesible without...
+     *       creating a dummy instance.
+     *
+     * @param id Child's id
+     * @throws com.mauriciogiordano.easydb.exception.NoContextFoundException in case of null context.
+     * @return The child if found, null otherwise.
+     */
+    public C findChild(String id) {
+        int index = getChildrenList().indexOf(id);
+
+        if (index == ArrayUtils.INDEX_NOT_FOUND) {
             return null;
         }
 
-        O child = null;
+        C child = null;
 
         try {
             Model dummy = (Model) childClazz.newInstance();
             dummy.setContext(context);
 
-            child = (O) dummy.find(id);
+            child = (C) dummy.find(id);
         } catch (InstantiationException e) {
             e.printStackTrace();
         } catch (IllegalAccessException e) {
@@ -122,27 +184,30 @@ public abstract class HasManyModel<T, O> extends Model {
         return child;
     }
 
-    public List<O> findAllChildren() {
-        JSONArray objects = childrenList();
+    /**
+     * Find all objects from the child list.
+     *
+     * TODO: Figure out how to make this accesible without...
+     *       creating a dummy instance.
+     *
+     * @throws com.mauriciogiordano.easydb.exception.NoContextFoundException in case of null context.
+     * @return A list of all children.
+     */
+    public List<C> findAllChildren() {
+        List<String> objects = getChildrenList();
 
-        List<O> children = new ArrayList<O>();
+        List<C> children = new ArrayList<C>();
 
         try {
             Model dummy = (Model) childClazz.newInstance();
             dummy.setContext(context);
 
-            for (int i = 0; i < objects.length(); i++) {
-                try {
-                    Object id = objects.get(i);
-
-                    children.add((O) dummy.find(id));
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
+            for (String id : objects) {
+                children.add((C) dummy.find(id));
             }
-        } catch(IllegalAccessException e) {
+        } catch (IllegalAccessException e) {
             e.printStackTrace();
-        } catch(InstantiationException e) {
+        } catch (InstantiationException e) {
             e.printStackTrace();
         }
 

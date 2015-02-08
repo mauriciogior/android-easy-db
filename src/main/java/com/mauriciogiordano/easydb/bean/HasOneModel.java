@@ -35,6 +35,6 @@ public abstract class HasOneModel<T, O> extends Model<T> {
         return object;
     }
 
-    public abstract Object getRelatedId();
+    public abstract String getRelatedId();
 
 }

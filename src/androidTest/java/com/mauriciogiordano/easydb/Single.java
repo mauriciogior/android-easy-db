@@ -8,6 +8,8 @@ import android.content.Context;
 
 import com.mauriciogiordano.easydb.bean.Model;
 
+import java.util.List;
+
 public class Single extends Model<Single> {
 
     @ModelField
@@ -23,8 +25,16 @@ public class Single extends Model<Single> {
         super(Single.class, false, context);
     }
 
+    public static Single find(String id, Context context) {
+        return (new Single(context)).find(id);
+    }
+
+    public static List<Single> findAll(Context context) {
+        return (new Single(context)).findAll();
+    }
+
     @Override
-    public Object getId() {
+    public String getId() {
         return id;
     }
 

@@ -27,7 +27,7 @@ public class Broken extends Model {
     }
 
     @Override
-    public Object getId() {
+    public String getId() {
         return id;
     }
 

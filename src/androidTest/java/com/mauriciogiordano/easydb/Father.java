@@ -23,7 +23,7 @@ public class Father extends HasManyModel<Father, Child> {
     }
 
     @Override
-    public Object getId() {
+    public String getId() {
         return id;
     }
 

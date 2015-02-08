@@ -23,7 +23,7 @@ public class Child extends Model<Child> {
     }
 
     @Override
-    public Object getId() {
+    public String getId() {
         return id;
     }
 
