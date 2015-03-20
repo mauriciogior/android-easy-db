@@ -5,6 +5,10 @@ import android.test.ActivityUnitTestCase;
 
 import com.mauriciogiordano.easydb.bean.Model;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -74,6 +78,24 @@ public class ModelTestCase extends ActivityUnitTestCase<SampleActivity> {
         assertEquals("Should be equal!", "[Hello, World]", lookForSingle.getSomeList().toString());
 
         assertTrue("Should be true!", lookForSingle.remove());
+
+        try {
+            JSONObject jsonSingleWithDifferentListType = new JSONObject();
+            jsonSingleWithDifferentListType.put("id", "0");
+            jsonSingleWithDifferentListType.put("hash", single.getClass().getName());
+
+            JSONArray someListSnd = new JSONArray();
+            someListSnd.put(10);
+            someListSnd.put(8);
+
+            jsonSingleWithDifferentListType.put("someList", someListSnd);
+
+            Single testForBugs = new Single().fromJson(jsonSingleWithDifferentListType);
+
+            assertEquals("Should be equal!", testForBugs.getSomeList().toString(), "[10, 8]");
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
 
         lookForSingle = Single.find("1", context);
 

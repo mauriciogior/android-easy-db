@@ -225,10 +225,10 @@ public abstract class Model<T> {
 
                             try {
                                 if (list != null) {
-                                    List<String> stringList = new ArrayList<String>();
+                                    List<String> stringList = new ArrayList<>();
 
                                     for (int i = 0; i < list.length(); i++) {
-                                        stringList.add((String) list.get(i));
+                                        stringList.add(list.getString(i));
                                     }
 
                                     field.set(object, stringList);
