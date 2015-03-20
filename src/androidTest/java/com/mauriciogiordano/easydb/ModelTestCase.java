@@ -5,6 +5,7 @@ import android.test.ActivityUnitTestCase;
 
 import com.mauriciogiordano.easydb.bean.Model;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class ModelTestCase extends ActivityUnitTestCase<SampleActivity> {
@@ -22,24 +23,24 @@ public class ModelTestCase extends ActivityUnitTestCase<SampleActivity> {
        context.getSharedPreferences(Single.class.getPackage().getName()
                         + "." + Single.class.getName() + "." + "object",
                 Context.MODE_PRIVATE).edit().clear().commit();
-        context.getSharedPreferences(Single.class.getPackage().getName()
+       context.getSharedPreferences(Single.class.getPackage().getName()
                         + "." + Single.class.getName() + "." + "objectList",
                 Context.MODE_PRIVATE).edit().clear().commit();
 
-        context.getSharedPreferences(Father.class.getPackage().getName()
+       context.getSharedPreferences(Father.class.getPackage().getName()
                         + "." + Father.class.getName() + "." + "object",
                 Context.MODE_PRIVATE).edit().clear().commit();
-        context.getSharedPreferences(Father.class.getPackage().getName()
+       context.getSharedPreferences(Father.class.getPackage().getName()
                         + "." + Father.class.getName() + "." + "objectList",
                 Context.MODE_PRIVATE).edit().clear().commit();
-        context.getSharedPreferences(Father.class.getPackage().getName()
+       context.getSharedPreferences(Father.class.getPackage().getName()
                         + "." + Father.class.getName() + "." + "children",
                 Context.MODE_PRIVATE).edit().clear().commit();
 
-        context.getSharedPreferences(Child.class.getPackage().getName()
+       context.getSharedPreferences(Child.class.getPackage().getName()
                         + "." + Child.class.getName() + "." + "object",
                 Context.MODE_PRIVATE).edit().clear().commit();
-        context.getSharedPreferences(Child.class.getPackage().getName()
+       context.getSharedPreferences(Child.class.getPackage().getName()
                         + "." + Child.class.getName() + "." + "objectList",
                 Context.MODE_PRIVATE).edit().clear().commit();
 
@@ -56,8 +57,13 @@ public class ModelTestCase extends ActivityUnitTestCase<SampleActivity> {
             }
         });
 
+        List<String> someList = new ArrayList<>();
+        someList.add("Hello");
+        someList.add("World");
+
         single.setId("1");
         single.setHash(single.getClass().getName());
+        single.setSomeList(someList);
         single.save();
 
         Single lookForSingle = Single.find("1", context);
@@ -65,6 +71,7 @@ public class ModelTestCase extends ActivityUnitTestCase<SampleActivity> {
         assertNotNull("Object 1 should be found!", lookForSingle);
         assertTrue("Field should be equal!", lookForSingle.getId().equals(lookForSingle.getId()));
         assertTrue("Field should be equal!", lookForSingle.getHash().equals(lookForSingle.getHash()));
+        assertEquals("Should be equal!", "[Hello, World]", lookForSingle.getSomeList().toString());
 
         assertTrue("Should be true!", lookForSingle.remove());
 

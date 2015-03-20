@@ -8,6 +8,7 @@ import com.mauriciogiordano.easydb.exception.NoContextFoundException;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -16,6 +17,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Field;
+import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -52,7 +54,8 @@ public abstract class Model<T> {
         FLOAT,
         DOUBLE,
         STRING,
-        BOOLEAN
+        BOOLEAN,
+        LIST
     }
 
     /**
@@ -69,7 +72,8 @@ public abstract class Model<T> {
      */
     private boolean isAllowed(Field field) {
         return ClassUtils.isPrimitiveOrWrapper(field.getType())
-                || CharSequence.class.isAssignableFrom(field.getType());
+                || CharSequence.class.isAssignableFrom(field.getType())
+                || List.class.isAssignableFrom(field.getType());
     }
 
     /**
@@ -134,11 +138,12 @@ public abstract class Model<T> {
     /**
      * Return a Fields object for a given field's Class.
      *
-     * @param clazz The class that will be used.
+     * @param field The class that will be used.
      * @throws RuntimeException in case the field type is not found.
      * @return A Fields type if found.
      */
-    private static Fields toFieldEnum(Class<?> clazz) {
+    private static Fields toFieldEnum(Field field) {
+        Class<?> clazz = field.getType();
         String name = clazz.getSimpleName().toLowerCase();
 
         if (name.equals("int") || name.equals("integer")) {
@@ -153,9 +158,16 @@ public abstract class Model<T> {
             return Fields.STRING;
         } else if (name.equals("boolean")) {
             return Fields.BOOLEAN;
-        } else {
-            throw new RuntimeException("Field not found!");
+        } else if (clazz.isAssignableFrom(List.class)) {
+            ParameterizedType listType = (ParameterizedType) field.getGenericType();
+            Class<?> listClass = (Class<?>) listType.getActualTypeArguments()[0];
+
+            if (listClass.toString().equals("class java.lang.String")) {
+                return Fields.LIST;
+            }
         }
+
+        throw new RuntimeException("Field not found!");
     }
 
     /**
@@ -189,7 +201,7 @@ public abstract class Model<T> {
 
                     field.setAccessible(true);
 
-                    switch (toFieldEnum(field.getType())) {
+                    switch (toFieldEnum(field)) {
                         case INT:
                             field.setInt(object, json.optInt(name, 0));
                             break;
@@ -208,6 +220,24 @@ public abstract class Model<T> {
                         case BOOLEAN:
                             field.setBoolean(object, json.optBoolean(name, false));
                             break;
+                        case LIST:
+                            JSONArray list = json.optJSONArray(name);
+
+                            try {
+                                if (list != null) {
+                                    List<String> stringList = new ArrayList<String>();
+
+                                    for (int i = 0; i < list.length(); i++) {
+                                        stringList.add((String) list.get(i));
+                                    }
+
+                                    field.set(object, stringList);
+                                }
+                            } catch (JSONException e) {
+                                // TODO.
+                            }
+
+                            break;
                     }
 
                     field.setAccessible(was);
@@ -216,9 +246,7 @@ public abstract class Model<T> {
                 e.printStackTrace();
             }
 
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-        } catch (InstantiationException e) {
+        } catch (IllegalAccessException | InstantiationException e) {
             e.printStackTrace();
         }
 
@@ -248,7 +276,7 @@ public abstract class Model<T> {
 
                 field.setAccessible(true);
 
-                switch (toFieldEnum(field.getType())) {
+                switch (toFieldEnum(field)) {
                     case INT:
                         json.put(name, field.getInt(this));
                         break;
@@ -267,13 +295,23 @@ public abstract class Model<T> {
                     case BOOLEAN:
                         json.put(name, field.getBoolean(this));
                         break;
+                    case LIST:
+                        JSONArray list = new JSONArray();
+                        List<String> stringList = (List<String>) field.get(this);
+
+                        if (stringList != null) {
+                            for (String value : stringList) {
+                                list.put(value);
+                            }
+                        }
+
+                        json.put(name, list);
+                        break;
                 }
 
                 field.setAccessible(was);
             }
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-        } catch (JSONException e) {
+        } catch (IllegalAccessException | JSONException e) {
             e.printStackTrace();
         }
 

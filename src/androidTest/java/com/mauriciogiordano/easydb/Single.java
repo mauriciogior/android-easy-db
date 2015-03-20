@@ -16,6 +16,8 @@ public class Single extends Model<Single> {
     private String id;
     @ModelField
     private String hash;
+    @ModelField
+    private List<String> someList;
 
     public Single() {
         super(Single.class, false);
@@ -48,5 +50,13 @@ public class Single extends Model<Single> {
 
     public void setHash(String hash) {
         this.hash = hash;
+    }
+
+    public List<String> getSomeList() {
+        return someList;
+    }
+
+    public void setSomeList(List<String> someList) {
+        this.someList = someList;
     }
 }
