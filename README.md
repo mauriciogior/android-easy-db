@@ -3,11 +3,11 @@ A simple and easy database system developed for Android.
 
 ### Installation
 
-Using maven you can include the repository `com.mauriciogiordano:easydb:0.1.1`.
+Using maven you can include the repository `com.mauriciogiordano:easydb:0.1.3`.
 
-In gradle using maven `compile "com.mauriciogiordano:easydb:0.1.1"`.
+In gradle using maven `compile "com.mauriciogiordano:easydb:0.1.3"`.
 
-The JAR can be [found here](http://search.maven.org/remotecontent?filepath=com/mauriciogiordano/easydb/0.1.0/easydb-0.1.0-sources.jar)
+The JAR can be [found here](http://search.maven.org/remotecontent?filepath=com/mauriciogiordano/easydb/0.1.3/easydb-0.1.3-sources.jar)
 
 ## Quick Usage
 
@@ -69,6 +69,8 @@ public class Note extends Model<Note> {
     private String title = "";
     @ModelField
     private String content = "";
+    @ModelField
+    private List<String> someList = new ArrayList<String>();
 
     // required empty constructor!
     public Note() {
@@ -90,6 +92,8 @@ public class Note extends Model<Note> {
     public void setTitle(String title) { this.title = title; }
     public String getContent() { return content; }
     public void setContent(String content) { this.content = content; }
+    public List<String> getSomeList() { return someList; }
+    public void setSomeList(List<String> someList) { this.someList = someList; }
 
     public static Note fromJson(JSONObject json, Context context) {
         Note dummy = new Note(context);
